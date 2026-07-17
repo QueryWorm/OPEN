@@ -1,72 +1,91 @@
-# Agent Instructions
+# AGENTS.md
 
-This project is the **OpenCode setup meta-project**. It contains the setup plan and configuration reference for migrating/copying to new environments.
+## Language
+Отвечай на языке пользователя. Если пользователь пишет на русском — отвечай на русском.
 
-## Non-Interactive Shell Commands
+## Red Lines
+- Не удалять файлы без явного подтверждения
+- Не менять конфиги без понимания текущих значений
+- Не говорить "готово" без Proof Loop
+- Не трогать работающий код без явных границ изменений
+- Не писать код/псевдокод в документации
 
-**ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.
+## Beads Rule
+Перед началом любой работы — `bd create` или `bd ready`.
+Без issue в базе — агент не начинает писать код.
+Если `.beads/` нет — инициализировать через `bd init` (только с подтверждения пользователя).
+Каждая задача = один issue. Закрытие задачи = `bd close <id>`.
 
-Shell commands like `cp`, `mv`, and `rm` may be aliased to include `-i` (interactive) mode on some systems, causing the agent to hang indefinitely waiting for y/n input.
+## Workflow начала сессии (обязателен к исполнению)
 
-**Use these forms instead:**
-```bash
-cp -f source dest           # NOT: cp source dest
-mv -f source dest           # NOT: mv source dest
-rm -f file                  # NOT: rm file
-rm -rf directory            # NOT: rm -r directory
-cp -rf source dest          # NOT: cp -r source dest
-```
+1. `bd prime` — загрузить контекст проекта
+2. Если `.beads/` нет → предложить пользователю `bd init`. НЕ продолжать работу пока не инициализирован.
+3. `bd ready` — показать готовые задачи
+4. Определи проект по `pwd`
+5. **Запусти `handoff-load`** — скрипт найдёт последний handoff, выведет его. Покажи результат пользователю. Если handoff не найден — предупреди.
+6. Если пользователь подтвердил контекст — спроси, что делаем сегодня
+7. Определи стек задачи — читай `agents/procedural/{стек}.txt` если есть. Если непонятно — спроси у пользователя или предложи варианты
+8. Загрузи superpower skills если задача > 2 шагов
+9. **Логируй загруженные skills** — чтобы после `/new` восстановить
 
-**Other commands that may prompt:**
-- `scp` - use `-o BatchMode=yes` for non-interactive
-- `ssh` - use `-o BatchMode=yes` to fail instead of prompting
-- `apt-get` - use `-y` flag
-- `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
+## Workflow конца сессии
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
-## Beads Issue Tracker
+Перед завершением сессии (по просьбе пользователя или если чувствуешь, что сессия заканчивается):
 
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+1. **Записать handoff** в `~/.opencode/handoffs/{дата}-{проект}-{что-сделано}.md` по шаблону `~/.opencode/handoff_template.md`
+2. В handoff обязательно указать какие skills были загружены
+3. После записи — запустить `cat` и показать пользователю
 
-### Quick Reference
+### Usage handoff-save
+> Для ручного сохранения handoff после сессии используйте:
+>   handoff-save "<описание>" [project] [skills[, через запятую]]
+> Параметры:
+>  - <описание>   : краткое описание/результат сессии
+>  - [project]    : имя проекта (по-умолчанию autodetect по pwd)
+>  - [skills]     : (опц.) через запятую, все загруженные skills/plugins этой сессии
+>
+> Пример:
+>   handoff-save "cookies-integration, threat reasoning, тесты" NudeWeb "brainstorming,subagent-driven-development"
+>
+> После сохранения файл появится в ~/.opencode/handoffs и доступен через handoff-load
+>
+> (Можно вызывать несколько раз за сессию, не затирает прошлые!)
 
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
+## Static facts
+<!-- Добавь информацию о своём оборудовании, серверах, проектах -->
+<!--
+### My Server
+- OS: ...
+- Storage: ...
+- Autostart: ...
 
-### Rules
+### My Project
+- Путь: ...
+- Stack: ...
+-->
 
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+## Available Capabilities
+ВСЁ ЭТО УЖЕ УСТАНОВЛЕНО И РАБОТАЕТ. Используй не задумываясь:
 
-**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+- **Superpowers skills** — загружай через Skill tool при каждой задаче >2 шагов
+- **Context7 MCP** — документация библиотек через `context7_query-docs` / `context7_resolve-library-id`
+- **Sequential Thinking MCP** — сложные рассуждения через `sequential-thinking_sequentialthinking`
+- **RTK** — все bash-команды автоматически оборачиваются через `rtk rewrite` (плагин rtk.ts)
+- **Beads** — `bd` команды для таск-трекинга (`bd prime` выполняется автоматически при старте)
+- **Handoff template** — `~/.opencode/handoff_template.md`
 
-## Session Completion
+## Superpowers + Delegation
+- Если задача > 2 шагов → загрузи соответствующий skill
+- Если multi-step → используй subagent-driven-development (не делай всё сам)
+- После `/new` — skills сбрасываются, загружать заново
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+## Инструменты
+- `rtk` — CLI-прокси для фильтрации вывода (ls, read, pytest и т.д.)
+- Все команды отдавать через `rtk`
 
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->
+## Proof Loop
+После subagent-driven-development:
+1. Сверить реализацию с планом (каждый пункт выполнен?)
+2. Запустить команду-доказательство
+3. Прочитать полный вывод
+4. Только после этого говорить "готово"

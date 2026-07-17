@@ -11,3 +11,8 @@ node_modules/
 
 # Handoffs (private per-machine, template is in repo)
 opencode/handoffs/
+
+# Personal overrides (use private repo instead)
+AGENTS.md.local
+rate-limit-fallback.json
+config/agents/

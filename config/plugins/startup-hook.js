@@ -1,8 +1,28 @@
 export const StartupHookPlugin = async ({ $ }) => {
   return {
     "session.created": async () => {
-      await $`bash -c "which bd > /dev/null 2>&1 && bd prime || echo '[beads] bd not found, skipping'"`;
+      // Beads: auto-detect + prime + ready
+      await $`bash -c "
+        if ! which bd > /dev/null 2>&1; then
+          echo '[beads] bd не найден в PATH — пропускаю'
+        elif [ ! -d .beads ]; then
+          echo '[beads] .beads/ не найден в '$(pwd)'
+          echo '[beads] Для инициализации: bd init'
+        else
+          bd prime 2>/dev/null
+          echo ''
+          READY=\$(bd ready --quiet 2>/dev/null)
+          if [ -n \"\$READY\" ]; then
+            echo '=== ГОТОВО К РАБОТЕ ==='
+            echo \"\$READY\"
+            echo '======================'
+          else
+            echo '[beads] нет открытых задач'
+          fi
+        fi
+      "`;
 
+      // Handoffs: показать последний
       await $`bash -c "
         HANDOFFS=~/.opencode/handoffs
         mkdir -p \$HANDOFFS
