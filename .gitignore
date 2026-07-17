@@ -1,5 +1,13 @@
-
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
 .beads-credential-key
+
+# OpenCode binary
+opencode/bin/opencode
+
+# Dependencies
+node_modules/
+
+# Handoffs (private per-machine, template is in repo)
+opencode/handoffs/

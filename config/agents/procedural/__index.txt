@@ -1,0 +1,9 @@
+# Procedural index
+
+Выбери файл по стеку задачи:
+
+- **Masha** — `masha.md`
+- **TGclients** — `tgclients.md`
+- **Kali** — `kali.md` (TODO)
+- **VSL** — `vsl.md` (TODO)
+- **Termux** — `termux.md` (TODO)
