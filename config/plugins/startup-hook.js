@@ -1,14 +1,15 @@
 export const StartupHookPlugin = async ({ $ }) => {
   return {
     "session.created": async () => {
-      // Beads: auto-detect + prime + ready
+      // Beads: auto-init + prime + ready
       await $`bash -c "
         if ! which bd > /dev/null 2>&1; then
           echo '[beads] bd не найден в PATH — пропускаю'
         elif [ ! -d .beads ]; then
-          echo '[beads] .beads/ не найден в '$(pwd)'
-          echo '[beads] Для инициализации: bd init'
-        else
+          echo '[beads] .beads/ не найден — инициализирую...'
+          bd init --non-interactive 2>/dev/null && echo '[beads] инициализирован' || echo '[beads] ошибка инициализации'
+        fi
+        if [ -d .beads ]; then
           bd prime 2>/dev/null
           echo ''
           READY=\$(bd ready --quiet 2>/dev/null)
